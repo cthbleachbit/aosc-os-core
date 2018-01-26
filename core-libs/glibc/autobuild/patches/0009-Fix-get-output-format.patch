@@ -1,0 +1,26 @@
+diff --git a/configure b/configure
+index d8e1c50e11..4d74c92d6f 100755
+--- a/configure
++++ b/configure
+@@ -6109,7 +6109,7 @@ if ${libc_cv_output_format+:} false; then :
+   $as_echo_n "(cached) " >&6
+ else
+   if libc_cv_output_format=`
+-${CC-cc} -nostartfiles -nostdlib $no_ssp -Wl,--print-output-format 2>&5`
++${CC-cc} $CFLAGS $CPPFLAGS $LDFLAGS -nostartfiles -nostdlib $no_ssp -Wl,--print-output-format 2>&5`
+ then
+   :
+ else
+diff --git a/configure.ac b/configure.ac
+index 77456aa8d9..c884af736f 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1539,7 +1539,7 @@ AC_SUBST(libc_cv_has_glob_dat)
+ 
+ AC_CACHE_CHECK(linker output format, libc_cv_output_format, [dnl
+ if libc_cv_output_format=`
+-${CC-cc} -nostartfiles -nostdlib $no_ssp -Wl,--print-output-format 2>&AS_MESSAGE_LOG_FD`
++${CC-cc} $CFLAGS $CPPFLAGS $LDFLAGS -nostartfiles -nostdlib $no_ssp -Wl,--print-output-format 2>&AS_MESSAGE_LOG_FD`
+ then
+   :
+ else

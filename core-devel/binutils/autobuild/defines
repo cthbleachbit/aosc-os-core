@@ -15,13 +15,12 @@ AUTOTOOLS_AFTER="--prefix=/usr \
                  --disable-werror --enable-lto --disable-gdb
                  --build=${ARCH_TARGET[$ARCH]}"
 
-if [[ "${CROSS:-$ARCH}" != "powerpc" && "${CROSS:-$ARCH}" != "mipsel" ]]; then
+if [[ "${CROSS:-$ARCH}" != "powerpc" && "${CROSS:-$ARCH}" != "mips64el" ]]; then
     AUTOTOOLS_AFTER+=" --enable-gold=default"
 fi
 
-if [[ "${CROSS:-$ARCH}" = *64 ]]; then
+if [[ "${CROSS:-$ARCH}" = *64 || "${CROSS:-$ARCH}" = "mips64el" || "${CROSS:-$ARCH}" = "mips64r2el" ]]; then
 	AUTOTOOLS_AFTER+=" --enable-64-bit-bfd"
-fi
 
 alias BUILD_READY='make configure-host'
 MAKE_AFTER="prefix=$PKGDIR/usr tooldir=$PKGDIR/usr BUILDROOT= DESTDIR="

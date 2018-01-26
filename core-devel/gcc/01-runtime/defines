@@ -60,18 +60,18 @@ AUTOTOOLS_AFTER="--prefix=/usr \
                  --enable-checking=release \
                  --with-default-libstdcxx-abi=gcc4-compatible"
 
+# Although with patch applied, both of our MIPS archs is happy with GNU hash style,
+# but for compatibility reason, we still set hash-style as both for them.
+if [[ "${CROSS:-$ARCH}" = mips* ]]; then
+    AUTOTOOLS_AFTER+=" --with-linker-hash-style=both"
+else
+    AUTOTOOLS_AFTER+=" --with-linker-hash-style=gnu"
+fi
+
 # Cross.
 if [[ "${CROSS:-$ARCH}" = *cross* ]]; then
     AUTOTOOLS_AFTER+=" --host=${ARCH_TARGET[$ARCH]} \
                        --target=${ARCH_TARGET[$ARCH]}"
-fi
-
-# MIPS is not yet happy with GNU hashing style.
-# Q: Really?
-# A: At least our MIPS-II (o32) still couldn't be built with GNU hash style.
-#    It is a ABI incompatibility, not an emulation error...
-if [[ "${CROSS:-$ARCH}" != mips32 ]]; then
-    AUTOTOOLS_AFTER+=" --with-linker-hash-style=gnu"
 fi
 
 # ARM and AArch64 specific.
@@ -103,7 +103,13 @@ if [[ "${CROSS:-$ARCH}" = "ppc64" ]]; then
 fi
 
 # MIPS64EL specific.
-if [[ "${CROSS:-$ARCH}" = "mips64el" ]]; then
+if [[ "${CROSS:-$ARCH}" != mips64el ]]; then
+    AUTOTOOLS_AFTER+=" --with-abi=64 --with-arch=mips3 \
+                       --with-tune=loongson2f"
+fi
+
+# MIPS64r2EL specific.
+if [[ "${CROSS:-$ARCH}" = "mips64r2el" ]]; then
     AUTOTOOLS_AFTER+=" --with-abi=64 --with-arch=mips64r2 \
                        --with-tune=loongson3a"
 fi

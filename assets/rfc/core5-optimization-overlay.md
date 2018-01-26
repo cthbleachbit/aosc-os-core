@@ -46,8 +46,8 @@ To clarify the proposal, a table is produced to show current plan on optimizatio
 | AMD64 (amd64)             | Yes      | AVX2 optimized binaries           | -march=haswell -mtune=haswell     |
 | ARMv7 (armel)             | No       | -                                 | -                                 |
 | ARMv8 (aarch64)           | No       | -                                 | -                                 |
-| MIPS32 (mipsel)           | Yes      | Loongson 2E+ binaries and patches | -march=loongson2 -mtune=loongson2 |
-| MIPS64 (mips64el)         | Yes      | Loongson 3+ binarie and patches   | -march=loongson3 -mtune=loongson3 |
+| MIPS-III (mips64el)       | Yes      | Loongson 2E+ binaries and patches | -march=loongson2 -mtune=loongson2 |
+| MIPS64r2 (mips64r2el)     | Yes      | Loongson 3+ binarie and patches   | -march=loongson3 -mtune=loongson3 |
 | PowerPC 32-bit (powerpc)  | Yes      | AltiVec optimized binaries        | -maltivec -mabi=altivec           |
 | PowerPC 64-bit BE (ppc64) | No       | -                                 | -                                 |
 
@@ -68,5 +68,5 @@ Questions
 Notes
 -----
 
-- ¹ However, it should be pointed out that this description comes with exceptions for ARMv7 (armel) where NEON is required, on MIPS32/64 (mipsel, mips64el) where MIPS-II (thus excluding MIPS-I) and MIPS64r2 (thus excluding MIPS64r1) ABIs are required, and on PowerPC 64-bit Big Endian (ppc64) where AltiVec is required (thus excluding some Freescale-based PowerPC 64-bit processors, which are used on some AmigaONE desktop computers, e.g. the A5000).
+- ¹ However, it should be pointed out that this description comes with exceptions for ARMv7 (armel) where NEON is required, on MIPS (mips64el, mips64r2el) where MIPS-III (thus excluding MIPS-II) and MIPS64r2 (thus excluding MIPS64r1) ABIs are required, and on PowerPC 64-bit Big Endian (ppc64) where AltiVec is required (thus excluding some Freescale-based PowerPC 64-bit processors, which are used on some AmigaONE desktop computers, e.g. the A5000).
 - ² Larabel, Michael. "Optimized Binaries Provide Great Benefits For Intel Haswell,” Phoronix, 15 June, 2013. http://www.phoronix.com/scan.php?page=article&item=intel_core_avx2

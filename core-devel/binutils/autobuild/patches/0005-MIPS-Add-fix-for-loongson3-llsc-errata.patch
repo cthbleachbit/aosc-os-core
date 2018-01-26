@@ -1,0 +1,187 @@
+From f19abd030fdd1d93278f0ebeba6bdcac6791ddd2 Mon Sep 17 00:00:00 2001
+From: Jiaxun Yang <jiaxun.yang@flygoat.com>
+Date: Sun, 21 Jan 2018 16:49:15 +0000
+Subject: [PATCH 1/2] [MIPS] Add fix for loongson3 llsc errata
+
+This patch adds fix for Loongson-3 llsc errata.
+
+/gas
+	* config/tc-mips.c (mips_fix_loongson3_llsc): New variables.
+	(md_loongopts): Add New options -mfix-loongson3-llsc,
+	-mno-fix-loongson3-llsc.
+	(md_parse_option): Initialize variables via above options.
+	(options): New enums for the above options.
+	(md_assemble): Insert sync before ll/lld if fix enabled.
+	* doc/c-mips.texi Document the -mfix-loongson3-llsc.
+	* testsuit/gas/mips/loongson3a-4.d New.
+	* testsuit/gas/mips/loongson3a-4.s New.
+---
+ gas/config/tc-mips.c                   | 55 ++++++++++++++++++++++++++++++++--
+ gas/doc/c-mips.texi                    |  6 ++++
+ gas/testsuite/gas/mips/loongson-3a-4.d | 18 +++++++++++
+ gas/testsuite/gas/mips/loongson-3a-4.s |  8 +++++
+ 4 files changed, 85 insertions(+), 2 deletions(-)
+ create mode 100644 gas/testsuite/gas/mips/loongson-3a-4.d
+ create mode 100644 gas/testsuite/gas/mips/loongson-3a-4.s
+
+diff --git a/gas/config/tc-mips.c b/gas/config/tc-mips.c
+index 97c9109c4f..0b2101e728 100644
+--- a/gas/config/tc-mips.c
++++ b/gas/config/tc-mips.c
+@@ -917,6 +917,9 @@ static bfd_boolean mips_fix_loongson2f_nop;
+ /* True if -mfix-loongson2f-nop or -mfix-loongson2f-jump passed.  */
+ static bfd_boolean mips_fix_loongson2f;
+ 
++/* ...likewise -mfix-loongson3-llsc.  */
++ static bfd_boolean mips_fix_loongson3_llsc = TRUE;
++
+ /* Given two FIX_VR4120_* values X and Y, bit Y of element X is set if
+    there must be at least one other instruction between an instruction
+    of type X and an instruction of type Y.  */
+@@ -1479,6 +1482,8 @@ enum options
+     OPTION_NO_FIX_LOONGSON2F_JUMP,
+     OPTION_FIX_LOONGSON2F_NOP,
+     OPTION_NO_FIX_LOONGSON2F_NOP,
++    OPTION_FIX_LOONGSON3_LLSC,
++    OPTION_NO_FIX_LOONGSON3_LLSC,
+     OPTION_FIX_VR4120,
+     OPTION_NO_FIX_VR4120,
+     OPTION_FIX_VR4130,
+@@ -1601,6 +1606,8 @@ struct option md_longopts[] =
+   {"mno-fix-loongson2f-jump", no_argument, NULL, OPTION_NO_FIX_LOONGSON2F_JUMP},
+   {"mfix-loongson2f-nop", no_argument, NULL, OPTION_FIX_LOONGSON2F_NOP},
+   {"mno-fix-loongson2f-nop", no_argument, NULL, OPTION_NO_FIX_LOONGSON2F_NOP},
++  {"mfix-loongson3-llsc",   no_argument, NULL, OPTION_FIX_LOONGSON3_LLSC},
++  {"mno-fix-loongson3-llsc", no_argument, NULL, OPTION_NO_FIX_LOONGSON3_LLSC},
+   {"mfix-vr4120",    no_argument, NULL, OPTION_FIX_VR4120},
+   {"mno-fix-vr4120", no_argument, NULL, OPTION_NO_FIX_VR4120},
+   {"mfix-vr4130",    no_argument, NULL, OPTION_FIX_VR4130},
+@@ -4126,8 +4133,43 @@ md_assemble (char *str)
+     }
+ 
+   if (insn_error.msg)
+-    report_insn_error (str);
+-  else if (insn.insn_mo->pinfo == INSN_MACRO)
++    {
++       report_insn_error (str);
++       goto out;
++     }
++
++  if (mips_fix_loongson3_llsc)
++    {
++      static expressionS bak_imm_expr;
++      static expressionS bak_offset_expr;
++      static bfd_reloc_code_real_type bak_offset_reloc[3] ;
++
++      struct insn_label_list *is_label;
++      is_label = seg_info (now_seg)->label_list;
++
++      if (((strcmp (insn.insn_mo->name, "ll") == 0)
++          ||(strcmp (insn.insn_mo->name, "lld") == 0))
++          && (strcmp (history[0].insn_mo->name, "sync") || is_label))
++        {
++           bak_imm_expr = imm_expr;
++           bak_offset_expr = offset_expr;
++
++           bak_offset_reloc[0] = offset_reloc[0];
++           bak_offset_reloc[1] = offset_reloc[1];
++           bak_offset_reloc[2] = offset_reloc[2];
++
++           md_assemble ((char *) "sync");
++
++           imm_expr = bak_imm_expr;
++           offset_expr = bak_offset_expr;
++
++           offset_reloc[0] = bak_offset_reloc[0];
++           offset_reloc[1] = bak_offset_reloc[1];
++           offset_reloc[2] = bak_offset_reloc[2];
++        }
++    }
++
++  if (insn.insn_mo->pinfo == INSN_MACRO)
+     {
+       macro_start ();
+       if (mips_opts.mips16)
+@@ -4144,6 +4186,7 @@ md_assemble (char *str)
+ 	append_insn (&insn, NULL, unused_reloc, FALSE);
+     }
+ 
++out:
+   mips_assembling_insn = FALSE;
+ }
+ 
+@@ -14652,6 +14695,14 @@ md_parse_option (int c, const char *arg)
+       mips_fix_loongson2f_nop = FALSE;
+       break;
+ 
++    case OPTION_FIX_LOONGSON3_LLSC:
++       mips_fix_loongson3_llsc = TRUE;
++       break;
++
++    case OPTION_NO_FIX_LOONGSON3_LLSC:
++       mips_fix_loongson3_llsc = FALSE;
++       break;
++
+     case OPTION_FIX_VR4120:
+       mips_fix_vr4120 = 1;
+       break;
+diff --git a/gas/doc/c-mips.texi b/gas/doc/c-mips.texi
+index 083b24d70b..2da6b8ca9c 100644
+--- a/gas/doc/c-mips.texi
++++ b/gas/doc/c-mips.texi
+@@ -268,6 +268,12 @@ Replace nops by @code{or at,at,zero} to work around the Loongson2F
+ deadlock.  The issue has been solved in later Loongson2F batches, but
+ this fix has no side effect to them.
+ 
++@item -mfix-loongson3-llsc
++@itemx -mno-fix-loongson3-llsc
++Insert @code{sync} instruction before @samp{ll} or @samp{lld} instrction
++to work around Loongson3 @samp{LL}/@samp{SC} errata.
++This issue exists in all Loongson3 CPUs.
++
+ @item -mfix-vr4120
+ @itemx -mno-fix-vr4120
+ Insert nops to work around certain VR4120 errata.  This option is
+diff --git a/gas/testsuite/gas/mips/loongson-3a-4.d b/gas/testsuite/gas/mips/loongson-3a-4.d
+new file mode 100644
+index 0000000000..ca7e16f9b1
+--- /dev/null
++++ b/gas/testsuite/gas/mips/loongson-3a-4.d
+@@ -0,0 +1,18 @@
++#as: -march=loongson3a -mabi=n64 -mfix-loongson3-llsc
++#objdump: -M reg-names=numeric -dr
++#name: Loongson3 LLSC fix test
++
++.*:     file format .*
++
++Disassembly of section .text:
++
++[0-9a-f]+ <.text>:
++.*:	0000000f        sync
++.*:	c3a80010        ll      t0,16(sp)
++.*:	0000000f        sync
++.*:	c3a80010        ll      t0,16(sp)
++.*:	0000000f        sync
++.*:	c3a80010        lld      t0,16(sp)
++.*:	0000000f        sync
++.*:	c3a80010        lld      t0,16(sp)
++#pass
+\ No newline at end of file
+diff --git a/gas/testsuite/gas/mips/loongson-3a-4.s b/gas/testsuite/gas/mips/loongson-3a-4.s
+new file mode 100644
+index 0000000000..fa7e26a8dc
+--- /dev/null
++++ b/gas/testsuite/gas/mips/loongson-3a-4.s
+@@ -0,0 +1,8 @@
++# Test the work around of the LLSC issue of Loongson3
++
++ll      $t0, 16($sp)
++sync
++ll      $t0, 16($sp)
++lld     $t0, 16($sp)
++sync
++lld     $t0, 16($sp)
+\ No newline at end of file
+-- 
+2.16.1
+
